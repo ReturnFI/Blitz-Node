@@ -42,7 +42,7 @@ install_hysteria() {
     wget -O /etc/hysteria/geoip.dat https://raw.githubusercontent.com/Chocolate4U/Iran-v2ray-rules/release/geoip.dat >/dev/null 2>&1
 
     echo "Generating SHA-256 fingerprint..."
-    sha256=$(openssl x509 -noout -fingerprint -sha256 -inform pem -in ca.crt | sed 's/SHA256=//;s/Fingerprint=//' | tr '[:lower:]' '[:upper:]')
+    sha256=$(openssl x509 -noout -fingerprint -sha256 -inform pem -in ca.crt | sed 's/.*=//' | tr '[:lower:]' '[:upper:]')
 
     if [[ ! $port =~ ^[0-9]+$ ]] || (( port < 1 || port > 65535 )); then
         echo -e "${red}Error:${NC} Invalid port number. Please enter a number between 1 and 65535."
