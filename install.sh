@@ -131,7 +131,7 @@ install_hysteria() {
 PANEL_API_URL=${panel_url}/api/v1/users/
 PANEL_TRAFFIC_URL=${panel_url}/api/v1/config/ip/nodestraffic
 PANEL_API_KEY=${panel_key}
-SYNC_INTERVAL=300
+SYNC_INTERVAL=35
 EOF
     chown hysteria:hysteria /etc/hysteria/.env
     chmod 600 /etc/hysteria/.env
