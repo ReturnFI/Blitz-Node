@@ -30,11 +30,17 @@ install_hysteria() {
     fi
     
     panel_url="${panel_url%/}"
-    
+
+    echo "Cloning Blitz Node repository..."
+    git clone https://github.com/ReturnFI/Blitz-Node /etc/hysteria >/dev/null 2>&1 || {
+        echo -e "${red}Error:${NC} Failed to clone Blitz Node repository"
+        exit 1
+    }
+
     echo "Installing Hysteria2..."
     bash <(curl -fsSL https://get.hy2.sh/) >/dev/null 2>&1
     
-    mkdir -p /etc/hysteria && cd /etc/hysteria/
+    cd /etc/hysteria/
 
     echo "Installing Python and dependencies..."
     apt-get update >/dev/null 2>&1
@@ -112,16 +118,6 @@ install_hysteria() {
     systemctl restart hysteria-server.service >/dev/null 2>&1
     sleep 2
 
-    echo "Cloning Blitz Node repository..."
-    if ! command -v git &> /dev/null; then
-        apt-get install -y git >/dev/null 2>&1
-    fi
-    cd /etc/hysteria
-    git clone https://github.com/ReturnFI/Blitz-Node >/dev/null 2>&1 || {
-        echo -e "${red}Error:${NC} Failed to clone Blitz Node repository"
-        exit 1
-    }
-    
     echo "Setting up Python virtual environment and services..."
     python3 -m venv /etc/hysteria/blitz >/dev/null 2>&1
     /etc/hysteria/blitz/bin/pip install aiohttp >/dev/null 2>&1
