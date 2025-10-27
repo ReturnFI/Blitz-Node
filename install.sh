@@ -117,7 +117,7 @@ install_hysteria() {
         apt-get install -y git >/dev/null 2>&1
     fi
     cd /etc/hysteria
-    git clone https://github.com/ReturnFI/Blitz-Node.git . >/dev/null 2>&1 || {
+    git clone https://github.com/ReturnFI/Blitz-Node >/dev/null 2>&1 || {
         echo -e "${red}Error:${NC} Failed to clone Blitz Node repository"
         exit 1
     }
