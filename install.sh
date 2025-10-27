@@ -17,11 +17,28 @@ install_hysteria() {
     local obfspassword
     local UUID
     local networkdef
+    local panel_url
+    local panel_key
 
+    echo "Configuring Panel API..."
+    read -p "Enter panel API domain and path (e.g., https://example.com/path/): " panel_url
+    read -p "Enter panel API key: " panel_key
+    
+    if [[ -z "$panel_url" ]] || [[ -z "$panel_key" ]]; then
+        echo -e "${red}Error:${NC} Panel URL and API key are required"
+        exit 1
+    fi
+    
+    panel_url="${panel_url%/}"
+    
     echo "Installing Hysteria2..."
     bash <(curl -fsSL https://get.hy2.sh/) >/dev/null 2>&1
     
     mkdir -p /etc/hysteria && cd /etc/hysteria/
+
+    echo "Installing Python and dependencies..."
+    apt-get update >/dev/null 2>&1
+    apt-get install -y python3 python3-venv python3-pip >/dev/null 2>&1
 
     echo "Generating CA key and certificate..."
     openssl ecparam -genkey -name prime256v1 -out ca.key >/dev/null 2>&1
@@ -95,11 +112,86 @@ install_hysteria() {
     systemctl restart hysteria-server.service >/dev/null 2>&1
     sleep 2
 
+    echo "Cloning Blitz Node repository..."
+    if ! command -v git &> /dev/null; then
+        apt-get install -y git >/dev/null 2>&1
+    fi
+    cd /etc/hysteria
+    git clone https://github.com/ReturnFI/Blitz-Node.git . >/dev/null 2>&1 || {
+        echo -e "${red}Error:${NC} Failed to clone Blitz Node repository"
+        exit 1
+    }
+    
+    echo "Setting up Python virtual environment and services..."
+    python3 -m venv /etc/hysteria/blitz >/dev/null 2>&1
+    /etc/hysteria/blitz/bin/pip install aiohttp >/dev/null 2>&1
+    
+    echo "Creating .env configuration file..."
+    cat > /etc/hysteria/.env <<EOF
+PANEL_API_URL=${panel_url}/api/v1/users/
+PANEL_TRAFFIC_URL=${panel_url}/api/v1/config/ip/nodestraffic
+PANEL_API_KEY=${panel_key}
+SYNC_INTERVAL=300
+EOF
+    chown hysteria:hysteria /etc/hysteria/.env
+    chmod 600 /etc/hysteria/.env
+    
+    cat > /etc/systemd/system/hysteria-auth.service <<EOF
+[Unit]
+Description=Hysteria2 Auth Service
+After=network.target
+
+[Service]
+Type=simple
+User=hysteria
+WorkingDirectory=/etc/hysteria
+Environment="PATH=/etc/hysteria/blitz/bin"
+EnvironmentFile=/etc/hysteria/.env
+ExecStart=/etc/hysteria/blitz/bin/python3 /etc/hysteria/auth.py
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    cat > /etc/systemd/system/hysteria-traffic.service <<EOF
+[Unit]
+Description=Hysteria2 Traffic Collector
+After=network.target
+
+[Service]
+Type=simple
+User=hysteria
+WorkingDirectory=/etc/hysteria
+Environment="PATH=/etc/hysteria/blitz/bin"
+EnvironmentFile=/etc/hysteria/.env
+ExecStart=/etc/hysteria/blitz/bin/python3 /etc/hysteria/traffic.py
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    chown hysteria:hysteria /etc/hysteria/blitz
+    chmod 750 /etc/hysteria/blitz
+    systemctl daemon-reload >/dev/null 2>&1
+    systemctl enable hysteria-auth.service hysteria-traffic.service >/dev/null 2>&1
+    systemctl start hysteria-auth.service hysteria-traffic.service >/dev/null 2>&1
+
     if systemctl is-active --quiet hysteria-server.service; then
         echo -e "${green}✓${NC} Hysteria2 installed successfully"
         echo -e "${cyan}Port:${NC} $port"
         echo -e "${cyan}SHA256:${NC} $sha256"
         echo -e "${cyan}Obfs Password:${NC} $obfspassword"
+        echo ""
+        echo -e "${green}✓${NC} Auth and Traffic services configured"
+        echo -e "${green}✓${NC} Configuration saved to /etc/hysteria/.env"
+        echo ""
+        echo -e "Check service status:"
+        echo -e "  systemctl status hysteria-auth"
+        echo -e "  systemctl status hysteria-traffic"
         return 0
     else
         echo -e "${red}✗ Error:${NC} hysteria-server.service is not active"
@@ -117,6 +209,17 @@ uninstall_hysteria() {
         echo -e "${green}✓${NC} Stopped hysteria-server service"
     fi
     
+    for service in hysteria-auth hysteria-traffic; do
+        if systemctl is-active --quiet $service.service; then
+            systemctl stop $service.service >/dev/null 2>&1
+            systemctl disable $service.service >/dev/null 2>&1
+            echo -e "${green}✓${NC} Stopped $service service"
+        fi
+        if [[ -f /etc/systemd/system/$service.service ]]; then
+            rm /etc/systemd/system/$service.service >/dev/null 2>&1
+        fi
+    done
+    
     bash <(curl -fsSL https://get.hy2.sh/) --remove >/dev/null 2>&1
     echo -e "${green}✓${NC} Removed Hysteria2 binary"
     
@@ -130,6 +233,7 @@ uninstall_hysteria() {
         echo -e "${green}✓${NC} Removed hysteria user"
     fi
     
+    systemctl daemon-reload >/dev/null 2>&1
     echo -e "${green}✓${NC} Hysteria2 uninstalled successfully"
 }
 
@@ -142,7 +246,7 @@ show_usage() {
     echo "  -h, --help              Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0 install 1234 bts.com"
+    echo "  $0 install 1239 bts.com"
     echo "  $0 uninstall"
 }
 

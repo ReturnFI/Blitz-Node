@@ -64,18 +64,21 @@ async def authenticate(request):
             return web.json_response({"ok": False, "msg": "Invalid password"}, status=401)
         
         expiration_days = user.get("expiration_days", 0)
+        creation_date_str = user.get("account_creation_date")
+        
+        if not creation_date_str:
+            creation_date_str = datetime.now().strftime("%Y-%m-%d")
+        
         if expiration_days > 0:
-            creation_date_str = user.get("account_creation_date")
-            if creation_date_str:
-                creation_date = datetime.strptime(creation_date_str, "%Y-%m-%d")
-                expiration_date = creation_date + timedelta(days=expiration_days)
-                if datetime.now() >= expiration_date:
-                    return web.json_response({"ok": False, "msg": "Account expired"}, status=401)
+            creation_date = datetime.strptime(creation_date_str, "%Y-%m-%d")
+            expiration_date = creation_date + timedelta(days=expiration_days)
+            if datetime.now() >= expiration_date:
+                return web.json_response({"ok": False, "msg": "Account expired"}, status=401)
 
         max_bytes = user.get("max_download_bytes", 0)
         if max_bytes > 0:
-            current_up = user.get("upload_bytes", 0)
-            current_down = user.get("download_bytes", 0)
+            current_up = user.get("upload_bytes") or 0
+            current_down = user.get("download_bytes") or 0
             if (current_up + current_down) >= max_bytes:
                 return web.json_response({"ok": False, "msg": "Data limit exceeded"}, status=401)
 
