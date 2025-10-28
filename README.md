@@ -11,7 +11,7 @@ Clone this repository:
 ```bash
    git clone https://github.com/ReturnFI/Blitz-Node.git
    cd Blitz-Node
-````
+```
 
 Make the installer executable:
 
@@ -21,15 +21,15 @@ Make the installer executable:
 
 Run the installer:
 
-   ```bash
-   ./install.sh install <port> <sni>
-   ```
+```bash
+./install.sh install <port> <sni>
+```
 
    Example:
 
-   ```bash
+```bash
    ./install.sh install 1239 example.com
-     ```
+```
 
 ### 2. Configure Panel API
 
