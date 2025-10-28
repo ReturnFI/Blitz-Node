@@ -9,15 +9,15 @@ Complete Hysteria2 node installation with panel integration, authentication, and
 Clone this repository:
 
 ```bash
-   git clone https://github.com/ReturnFI/Blitz-Node.git
-   cd Blitz-Node
+git clone https://github.com/ReturnFI/Blitz-Node.git
+cd Blitz-Node
 ```
 
 Make the installer executable:
 
-   ```bash
-   chmod +x install.sh
-   ```
+```bash
+chmod +x install.sh
+```
 
 Run the installer:
 
@@ -28,7 +28,7 @@ Run the installer:
    Example:
 
 ```bash
-   ./install.sh install 1239 example.com
+./install.sh install 1239 example.com
 ```
 
 ### 2. Configure Panel API
