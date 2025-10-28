@@ -43,19 +43,13 @@ install_hysteria() {
     cd /etc/hysteria/
 
     echo "Installing Python and dependencies..."
-    apt-get update >/dev/null 2>&1
-    apt-get install -y python3 python3-venv python3-pip >/dev/null 2>&1
+    apt-get update 
+    apt-get install -qq -y python3 python3-venv python3-pip jq
 
     echo "Generating CA key and certificate..."
     openssl ecparam -genkey -name prime256v1 -out ca.key >/dev/null 2>&1
     openssl req -new -x509 -days 36500 -key ca.key -out ca.crt -subj "/CN=$sni" >/dev/null 2>&1
     
-    if ! command -v jq &> /dev/null; then
-        echo "Installing jq..."
-        apt-get update >/dev/null 2>&1
-        apt-get install -y jq >/dev/null 2>&1
-    fi
-
     echo "Downloading geo data and config..."
     wget -O /etc/hysteria/config.json https://raw.githubusercontent.com/ReturnFI/Blitz/refs/heads/main/config.json >/dev/null 2>&1 || {
         echo -e "${red}Error:${NC} Failed to download config.json"
