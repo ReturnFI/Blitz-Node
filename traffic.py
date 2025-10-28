@@ -96,6 +96,10 @@ async def send_traffic_to_panel(users_traffic):
 
 async def sync_traffic():
     try:
+        if not PANEL_API_URL or not PANEL_API_KEY:
+            logger.error("Missing PANEL_API_URL or PANEL_API_KEY in environment")
+            return
+        
         logger.info("Starting traffic sync...")
         
         secret = get_secret()
@@ -111,13 +115,14 @@ async def sync_traffic():
         traffic_stats = await collect_traffic_from_hysteria(secret)
         
         users_traffic = []
-        for username, user_data in users_from_panel.items():
-            upload_delta = 0
-            download_delta = 0
+        for username, traffic_data in traffic_stats.items():
+            if username not in users_from_panel:
+                logger.debug(f"Skipping user {username} - not found on panel")
+                continue
             
-            if username in traffic_stats:
-                upload_delta = traffic_stats[username].get("upload_bytes", 0)
-                download_delta = traffic_stats[username].get("download_bytes", 0)
+            user_data = users_from_panel[username]
+            upload_delta = traffic_data.get("upload_bytes", 0)
+            download_delta = traffic_data.get("download_bytes", 0)
             
             if upload_delta == 0 and download_delta == 0 and user_data.get("status") != "On-hold":
                 logger.debug(f"Skipping user {username} - no traffic")
