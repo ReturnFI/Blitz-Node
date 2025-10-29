@@ -135,10 +135,11 @@ async def sync_traffic():
                 "status": "Online" if (upload_delta > 0 or download_delta > 0) else user_data.get("status", "Offline")
             }
             
-            if user_data.get("account_creation_date") is None:
-                traffic_entry["account_creation_date"] = datetime.now().strftime("%Y-%m-%d")
-            else:
-                traffic_entry["account_creation_date"] = user_data.get("account_creation_date")
+            if upload_delta > 0 or download_delta > 0:
+                if user_data.get("account_creation_date") is None:
+                    traffic_entry["account_creation_date"] = datetime.now().strftime("%Y-%m-%d")
+                else:
+                    traffic_entry["account_creation_date"] = user_data.get("account_creation_date")
             
             users_traffic.append(traffic_entry)
         
