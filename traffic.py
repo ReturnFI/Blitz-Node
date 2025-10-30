@@ -66,6 +66,22 @@ async def collect_traffic_from_hysteria(secret):
         logger.error(f"Failed to collect traffic from Hysteria2: {e}")
         return {}
 
+async def collect_online_clients(secret):
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {"Authorization": secret}
+            async with session.get(f"{HYSTERIA_API_BASE}/online", headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    logger.info(f"Successfully collected online clients: {len(data)} users")
+                    return data
+                else:
+                    logger.error(f"Hysteria2 online API returned status {resp.status}")
+                    return {}
+    except Exception as e:
+        logger.error(f"Failed to collect online clients from Hysteria2: {e}")
+        return {}
+
 async def send_traffic_to_panel(users_traffic):
     if not users_traffic:
         logger.debug("No traffic data to send")
@@ -113,6 +129,7 @@ async def sync_traffic():
             return
         
         traffic_stats = await collect_traffic_from_hysteria(secret)
+        online_counts = await collect_online_clients(secret)
         
         users_traffic = []
         for username, traffic_data in traffic_stats.items():
@@ -123,6 +140,7 @@ async def sync_traffic():
             user_data = users_from_panel[username]
             upload_delta = traffic_data.get("upload_bytes", 0)
             download_delta = traffic_data.get("download_bytes", 0)
+            online_count = online_counts.get(username, 0)
             
             if upload_delta == 0 and download_delta == 0 and user_data.get("status") != "On-hold":
                 logger.debug(f"Skipping user {username} - no traffic")
@@ -132,7 +150,8 @@ async def sync_traffic():
                 "username": username,
                 "upload_bytes": upload_delta,
                 "download_bytes": download_delta,
-                "status": "Online" if (upload_delta > 0 or download_delta > 0) else user_data.get("status", "Offline")
+                "online_count": online_count,
+                "status": "Online" if (upload_delta > 0 or download_delta > 0 or online_count > 0) else user_data.get("status", "Offline")
             }
             
             if upload_delta > 0 or download_delta > 0:
